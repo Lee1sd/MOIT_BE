@@ -2,6 +2,7 @@ package com.meetup.board.auth;
 
 import com.meetup.board.auth.dto.*;
 import com.meetup.board.common.exception.BusinessException;
+import com.meetup.board.common.exception.ErrorCode;
 import com.meetup.board.domain.user.User;
 import com.meetup.board.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class AuthService {
     @Transactional
     public void signup(SignupRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new BusinessException("이미 가입된 이메일입니다.", HttpStatus.CONFLICT);
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
         User user = User.builder()
                 .email(request.email())
@@ -35,10 +36,10 @@ public class AuthService {
     @Transactional(readOnly = true)
     public TokenResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED);
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
         return issueTokens(user.getId(), user.getRole().name());
@@ -50,17 +51,17 @@ public class AuthService {
         String refreshToken = request.refreshToken();
 
         if (!jwtTokenProvider.isValid(refreshToken)) {
-            throw new BusinessException("유효하지 않은 refresh token 입니다.", HttpStatus.UNAUTHORIZED);
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
         Long userId = jwtTokenProvider.getUserId(refreshToken);
 
         if (!tokenRedisService.isRefreshTokenValid(userId, refreshToken)) {
-            throw new BusinessException("만료되었거나 이미 사용된 refresh token 입니다.", HttpStatus.UNAUTHORIZED);
+            throw new BusinessException(ErrorCode.EXPIRED_REFRESH_TOKEN);
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         return issueTokens(user.getId(), user.getRole().name());
     }
