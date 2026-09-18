@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: study-meetup-board
+  profiles:
+    active: local
 
   datasource:
     url: jdbc:mysql://localhost:3306/moit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
