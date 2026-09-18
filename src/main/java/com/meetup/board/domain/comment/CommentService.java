@@ -1,7 +1,7 @@
 package com.meetup.board.domain.comment;
 
-import com.meetup.board.common.exception.ForbiddenException;
-import com.meetup.board.common.exception.NotFoundException;
+import com.meetup.board.common.exception.BusinessException;
+import com.meetup.board.common.exception.ErrorCode;
 import com.meetup.board.domain.comment.dto.CommentCreateRequest;
 import com.meetup.board.domain.comment.dto.CommentResponse;
 import com.meetup.board.domain.comment.dto.CommentUpdateRequest;
@@ -26,7 +26,7 @@ public class CommentService {
     @Transactional
     public Long create(Long postId, Long authorId, CommentCreateRequest request) {
         StudyPost post = studyPostRepository.findById(postId)
-                .orElseThrow(() -> new NotFoundException("모임 글을 찾을 수 없습니다. id=" + postId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
         User author = userRepository.getReferenceById(authorId);
 
         Comment comment = Comment.builder()
@@ -48,9 +48,9 @@ public class CommentService {
     @Transactional
     public void delete(Long commentId, Long requesterId) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new NotFoundException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
         if (!comment.isAuthor(requesterId)) {
-            throw new ForbiddenException("작성자만 삭제할 수 있습니다.");
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
         commentRepository.delete(comment);
     }
@@ -58,10 +58,10 @@ public class CommentService {
     @Transactional
     public CommentResponse update(Long postId, Long commentId, Long userId, CommentUpdateRequest request) {
         Comment comment = commentRepository.findByIdAndPostId(commentId, postId)
-                .orElseThrow(() -> new NotFoundException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(() ->  new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
         if (!comment.getAuthor().getId().equals(userId)) {
-            throw new ForbiddenException("본인 댓글만 수정할 수 있습니다.");
+            throw new BusinessException(ErrorCode.COMMENT_UPDATE_DENIED);
         }
 
         comment.updateContent(request.content());
