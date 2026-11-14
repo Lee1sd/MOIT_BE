@@ -1,6 +1,7 @@
 package com.meetup.board.domain.post;
 
-import com.meetup.board.common.exception.CapacityExceededException;
+import com.meetup.board.common.exception.BusinessException;
+import com.meetup.board.common.exception.ErrorCode;
 import com.meetup.board.domain.user.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -84,10 +85,10 @@ public class StudyPost {
     // 비관적 락으로 조회한 상태에서만 호출되어야 안전함 (StudyApplicationService 참고)
     public void applyOneSeat() {
         if (this.status != PostStatus.OPEN) {
-            throw new CapacityExceededException();
+            throw new BusinessException(ErrorCode.CAPACITY_EXCEEDED);
         }
         if (this.currentCount >= this.capacity) {
-            throw new CapacityExceededException();
+            throw new BusinessException(ErrorCode.CAPACITY_EXCEEDED);
         }
         this.currentCount += 1;
         if (this.currentCount >= this.capacity) {

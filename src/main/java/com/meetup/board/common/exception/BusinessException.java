@@ -3,14 +3,18 @@ package com.meetup.board.common.exception;
 import org.springframework.http.HttpStatus;
 
 public class BusinessException extends RuntimeException {
-    private final HttpStatus status;
+    private final ErrorCode errorCode;
 
-    public BusinessException(String message, HttpStatus status) {
-        super(message);
-        this.status = status;
+    public BusinessException(ErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.errorCode = errorCode;
+    }
+
+    public ErrorCode getErrorCode() {
+        return errorCode;
     }
 
     public HttpStatus getStatus() {
-        return status;
+        return errorCode.getStatus();
     }
 }

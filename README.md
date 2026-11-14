@@ -116,6 +116,28 @@ k6 run -e BASE_URL=http://localhost:8080 -e POST_ID=1 loadtest/apply-test.js
 | GET | /api/users/me/posts | 마이페이지 - 내가 만든 모임 | O |
 | GET | /api/users/me/applications | 마이페이지 - 내가 신청한 모임 | O |
 
+## 에러 응답 형식
+
+`GlobalExceptionHandler`가 처리하는 모든 에러는 아래 형식으로 내려간다. `code`는
+`common/exception/ErrorCode` enum의 이름이라, 클라이언트는 메시지 문구 대신 `code`로 분기하면 된다.
+
+```json
+// POST /api/posts/{id}/applications — 이미 신청한 모임에 다시 신청 (409)
+{
+  "code": "DUPLICATE_APPLICATION",
+  "message": "이미 신청한 모임입니다."
+}
+```
+
+| 상황 | HTTP | code |
+|---|---|---|
+| 정원 마감 | 409 | `CAPACITY_EXCEEDED` |
+| 중복 신청 (사전 검사 / 동시 요청의 DB unique 제약 위반 모두) | 409 | `DUPLICATE_APPLICATION` |
+| 그 외 DB 제약 위반 | 409 | `DATA_INTEGRITY_VIOLATION` |
+| 예상치 못한 서버 오류 | 500 | `INTERNAL_SERVER_ERROR` |
+
+전체 목록은 `ErrorCode` 참고.
+
 ## 로컬 실행
 
 DB 비밀번호/JWT secret은 환경변수로 분리돼 있음 (기본값은 `changeme` 등 placeholder라 실제 배포 전 반드시 교체).

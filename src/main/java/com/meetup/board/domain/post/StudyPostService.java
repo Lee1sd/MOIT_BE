@@ -1,7 +1,7 @@
 package com.meetup.board.domain.post;
 
-import com.meetup.board.common.exception.ForbiddenException;
-import com.meetup.board.common.exception.NotFoundException;
+import com.meetup.board.common.exception.BusinessException;
+import com.meetup.board.common.exception.ErrorCode;
 import com.meetup.board.domain.post.dto.PostCreateRequest;
 import com.meetup.board.domain.post.dto.PostResponse;
 import com.meetup.board.domain.post.dto.PostSummaryResponse;
@@ -60,13 +60,13 @@ public class StudyPostService {
     public void delete(Long postId, Long requesterId) {
         StudyPost post = findOrThrow(postId);
         if (!post.isAuthor(requesterId)) {
-            throw new ForbiddenException("작성자만 삭제할 수 있습니다.");
+            throw new BusinessException(ErrorCode.POST_ACCESS_DENIED);
         }
         studyPostRepository.delete(post);
     }
 
     private StudyPost findOrThrow(Long postId) {
         return studyPostRepository.findById(postId)
-                .orElseThrow(() -> new NotFoundException("모임 글을 찾을 수 없습니다. id=" + postId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
     }
 }

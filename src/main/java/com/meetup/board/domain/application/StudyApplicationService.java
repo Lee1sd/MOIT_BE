@@ -1,8 +1,6 @@
 package com.meetup.board.domain.application;
 
-import com.meetup.board.common.exception.DuplicateApplicationException;
-import com.meetup.board.common.exception.ForbiddenException;
-import com.meetup.board.common.exception.NotFoundException;
+import com.meetup.board.common.exception.*;
 import com.meetup.board.domain.application.dto.ApplicationResponse;
 import com.meetup.board.domain.application.dto.MyApplicationResponse;
 import com.meetup.board.domain.post.StudyPost;
@@ -39,11 +37,11 @@ public class StudyApplicationService {
     @Transactional
     public ApplicationResponse apply(Long postId, Long applicantId) {
         if (studyApplicationRepository.existsByPostIdAndApplicantId(postId, applicantId)) {
-            throw new DuplicateApplicationException();
+            throw new BusinessException(ErrorCode.DUPLICATE_APPLICATION);
         }
 
         StudyPost post = studyPostRepository.findByIdForUpdate(postId)
-                .orElseThrow(() -> new NotFoundException("모임 글을 찾을 수 없습니다. id=" + postId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         post.applyOneSeat(); // 정원 초과 시 CapacityExceededException
 
@@ -63,10 +61,10 @@ public class StudyApplicationService {
     @Transactional
     public void cancel(Long postId, Long applicationId, Long requesterId) {
         StudyApplication application = studyApplicationRepository.findByIdAndPostId(applicationId, postId)
-                .orElseThrow(() -> new NotFoundException("신청 내역을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND));
 
         if (!application.getApplicant().getId().equals(requesterId)) {
-            throw new ForbiddenException("본인 신청만 취소할 수 있습니다.");
+            throw new BusinessException(ErrorCode.APPLICATION_ACCESS_DENIED);
         }
 
         // 정원 롤백은 의도적으로 생략: 자리 반환은 관리자 승인 취소 정책과 함께 별도 이슈로 다룸 (README TODO 참고)
