@@ -19,7 +19,7 @@ public enum ErrorCode {
 
     // 모집글/신청
     CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "모집 정원이 마감되었습니다."),
-    DUPLICATE_APPLICATION(HttpStatus.UNPROCESSABLE_ENTITY, "이미 신청한 모임입니다."),
+    DUPLICATE_APPLICATION(HttpStatus.CONFLICT, "이미 신청한 모임입니다."),
 
     // 모집글/댓글/신청 - NotFound
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "모임 글을 찾을 수 없습니다."),
