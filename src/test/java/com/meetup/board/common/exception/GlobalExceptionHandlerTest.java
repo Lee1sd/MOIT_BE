@@ -79,6 +79,60 @@ class GlobalExceptionHandlerTest {
         assertThat(res.getBody().message()).isEqualTo("이미 처리된 요청입니다.");
     }
 
+    // 회귀: 중복된 값 자체에 신청 제약 이름이 들어 있어도 이메일 제약 위반으로 판정해야 한다 (PR #2 리뷰)
+    @Test
+    void 값에_신청_제약명이_들어간_이메일_중복은_DATA_INTEGRITY_VIOLATION() {
+        DataIntegrityViolationException e = new DataIntegrityViolationException(
+                "could not execute statement",
+                new SQLIntegrityConstraintViolationException(
+                        "Duplicate entry 'uk_app_post_user@example.com' for key 'users.uk_users_email'"));
+
+        ResponseEntity<ErrorResponse> res = handler.handleIntegrity(e);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(res.getBody().code()).isEqualTo("DATA_INTEGRITY_VIOLATION");
+    }
+
+    // 회귀: Hibernate가 다른 제약 이름을 줬으면 메시지에 신청 제약명이 있어도 메시지 검사로 넘어가지 않는다
+    @Test
+    void Hibernate가_다른_제약명을_주면_메시지와_무관하게_DATA_INTEGRITY_VIOLATION() {
+        SQLIntegrityConstraintViolationException sql = new SQLIntegrityConstraintViolationException(
+                "Duplicate entry 'uk_app_post_user@example.com' for key 'users.uk_users_email'");
+        DataIntegrityViolationException e = new DataIntegrityViolationException(
+                "could not execute statement",
+                new ConstraintViolationException("could not execute statement", sql, "users.uk_users_email"));
+
+        ResponseEntity<ErrorResponse> res = handler.handleIntegrity(e);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(res.getBody().code()).isEqualTo("DATA_INTEGRITY_VIOLATION");
+    }
+
+    @Test
+    void Hibernate가_테이블_접두사_없는_신청_제약명을_주면_DUPLICATE_APPLICATION() {
+        SQLIntegrityConstraintViolationException sql = new SQLIntegrityConstraintViolationException(
+                "Duplicate entry '1-2' for key 'uk_app_post_user'");
+        DataIntegrityViolationException e = new DataIntegrityViolationException(
+                "could not execute statement",
+                new ConstraintViolationException("could not execute statement", sql, "uk_app_post_user"));
+
+        ResponseEntity<ErrorResponse> res = handler.handleIntegrity(e);
+
+        assertThat(res.getBody().code()).isEqualTo("DUPLICATE_APPLICATION");
+    }
+
+    @Test
+    void 값에_for_key_구문이_들어가도_메시지_끝의_실제_제약명으로_판정() {
+        DataIntegrityViolationException e = new DataIntegrityViolationException(
+                "could not execute statement",
+                new SQLIntegrityConstraintViolationException(
+                        "Duplicate entry 'x for key 'uk_app_post_user'' for key 'users.uk_users_email'"));
+
+        ResponseEntity<ErrorResponse> res = handler.handleIntegrity(e);
+
+        assertThat(res.getBody().code()).isEqualTo("DATA_INTEGRITY_VIOLATION");
+    }
+
     @Test
     void 예상치_못한_예외는_500_INTERNAL_SERVER_ERROR() {
         ResponseEntity<ErrorResponse> res = handler.handleUnexpected(new IllegalStateException("boom"));
