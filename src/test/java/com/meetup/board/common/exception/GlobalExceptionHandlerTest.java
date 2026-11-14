@@ -20,7 +20,18 @@ class GlobalExceptionHandlerTest {
                 handler.handleBusiness(new BusinessException(ErrorCode.DUPLICATE_APPLICATION));
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(res.getBody().code()).isEqualTo("DUPLICATE_APPLICATION");
         assertThat(res.getBody().message()).isEqualTo("이미 신청한 모임입니다.");
+    }
+
+    @Test
+    void 비즈니스_예외는_ErrorCode의_name을_code로_내려준다() {
+        ResponseEntity<ErrorResponse> res =
+                handler.handleBusiness(new BusinessException(ErrorCode.CAPACITY_EXCEEDED));
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(res.getBody().code()).isEqualTo("CAPACITY_EXCEEDED");
+        assertThat(res.getBody().message()).isEqualTo("모집 정원이 마감되었습니다.");
     }
 
     @Test
@@ -37,6 +48,7 @@ class GlobalExceptionHandlerTest {
 
         assertThat(integrity.getStatusCode()).isEqualTo(business.getStatusCode());
         assertThat(integrity.getBody()).isEqualTo(business.getBody());
+        assertThat(integrity.getBody().code()).isEqualTo("DUPLICATE_APPLICATION");
     }
 
     @Test
@@ -49,11 +61,12 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> res = handler.handleIntegrity(e);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(res.getBody().code()).isEqualTo("DUPLICATE_APPLICATION");
         assertThat(res.getBody().message()).isEqualTo(ErrorCode.DUPLICATE_APPLICATION.getMessage());
     }
 
     @Test
-    void 다른_제약_위반은_일반_409_응답() {
+    void 다른_제약_위반은_공통_DATA_INTEGRITY_VIOLATION_응답() {
         DataIntegrityViolationException e = new DataIntegrityViolationException(
                 "could not execute statement",
                 new SQLIntegrityConstraintViolationException(
@@ -62,6 +75,16 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> res = handler.handleIntegrity(e);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(res.getBody().code()).isEqualTo("DATA_INTEGRITY_VIOLATION");
         assertThat(res.getBody().message()).isEqualTo("이미 처리된 요청입니다.");
+    }
+
+    @Test
+    void 예상치_못한_예외는_500_INTERNAL_SERVER_ERROR() {
+        ResponseEntity<ErrorResponse> res = handler.handleUnexpected(new IllegalStateException("boom"));
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(res.getBody().code()).isEqualTo("INTERNAL_SERVER_ERROR");
+        assertThat(res.getBody().message()).isEqualTo("서버 오류가 발생했습니다.");
     }
 }
